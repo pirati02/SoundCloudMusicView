@@ -14,6 +14,9 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.R.attr.left;
+import static android.R.attr.right;
+
 
 public class VisualiserView extends View {
 
@@ -21,9 +24,12 @@ public class VisualiserView extends View {
     private MediaPlayer mediaPlayer;
     private Visualizer visualizer;
     private List<Double> amplitudes;
+    private List<WaveItem> waves;
 
     private float initialWaveHeight = 1500f;
     private float initialRawX = 350;
+    private float rightScroll = 0f;
+    private float wavesWidthSum = 0f;
 
     public VisualiserView(Context context) {
         super(context);
@@ -38,6 +44,7 @@ public class VisualiserView extends View {
         mediaPlayer = MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3"));
         visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
         visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
+        waves = new ArrayList<>();
 
         final Visualizer.OnDataCaptureListener listener = new Visualizer.OnDataCaptureListener() {
             @Override
@@ -84,18 +91,22 @@ public class VisualiserView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        waves.clear();
+        wavesWidthSum = 0f;
         float middle = initialRawX;
         for (int i = 0; i < amplitudes.size(); i += 3) {
             double wave = amplitudes.get(i) * 60;
 
-            float startX = middle;
-            float stopX = startX + 7;
-            float tBottomY = initialWaveHeight / 2;
-            float tTopY = (float) (tBottomY - (wave / 2));
-            float bBottomY = (float) (tBottomY + (wave / 2));
+            float left = middle;
+            float right = middle + 10;
+            float top = (float) (initialWaveHeight / 2 - (wave / 2));
+            float bottom = (float) (initialWaveHeight / 2 + (wave / 2));
 
-            canvas.drawRect(startX + 10, tTopY, stopX, bBottomY, wavePaint);
-            middle = stopX;
+            waves.add(new WaveItem(top, bottom, left, right + 15));
+            wavesWidthSum += (right + left);
+
+            canvas.drawRect(left + 15, top, right, bottom, wavePaint);
+            middle = right;
         }
     }
 
@@ -109,7 +120,21 @@ public class VisualiserView extends View {
             case MotionEvent.ACTION_MOVE:
                 rawX = event.getRawX();
                 initialRawX = rawX - initialRawX;
-                invalidate();
+
+                WaveItem wave = null;
+                for (int i = 0; i < waves.size(); i++) {
+                    WaveItem waveItem = waves.get(i);
+                    int left = (int) ((int) waveItem.getLeft() - rawX);
+                    int right = (int) ((int) waveItem.getRight() - rawX);
+                    if (left > 0 && right < 0 && (i + 1) == waves.size())
+                        wave = waveItem;
+                }
+
+                if (initialRawX < 350 && wave != null) {
+                    rightScroll += rawX;
+                    wave = null;
+                    invalidate();
+                }
                 return true;
         }
         return false;
