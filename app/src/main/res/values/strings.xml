@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Test</string>
+    <string-array name="color_preset1">
+        <item>#fc0032</item>
+        <item>#f400fc</item>
+        <item>#4c00fc</item>
+        <item>#0058fc</item>
+        <item>#00b9fc</item>
+        <item>#00fceb</item>
+    </string-array>
+</resources>
