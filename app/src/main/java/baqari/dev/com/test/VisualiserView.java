@@ -23,8 +23,7 @@ public class VisualiserView extends View {
     private List<Double> amplitudes;
 
     private float initialWaveHeight = 1500f;
-    private float initialRawX = 0;
-    private boolean moved = false;
+    private float initialRawX = 350;
 
     public VisualiserView(Context context) {
         super(context);
@@ -49,7 +48,7 @@ public class VisualiserView extends View {
                     amplitude += Math.abs(y);
                 }
                 amplitude = amplitude / waveform.length / 2;
-                amplitudes.add(amplitude * 50);
+                amplitudes.add(amplitude * 60);
                 invalidate();
             }
 
@@ -86,36 +85,30 @@ public class VisualiserView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         float middle = initialRawX;
-        for (int i = 0; i < amplitudes.size(); i += 2) {
-            double wave = amplitudes.get(i) * 50;
+        for (int i = 0; i < amplitudes.size(); i += 3) {
+            double wave = amplitudes.get(i) * 60;
 
             float startX = middle;
-            float stopX = startX + 5;
+            float stopX = startX + 7;
             float tBottomY = initialWaveHeight / 2;
             float tTopY = (float) (tBottomY - (wave / 2));
             float bBottomY = (float) (tBottomY + (wave / 2));
 
-            canvas.drawRect(startX + 8, tTopY, stopX, bBottomY, wavePaint);
+            canvas.drawRect(startX + 10, tTopY, stopX, bBottomY, wavePaint);
             middle = stopX;
         }
     }
 
-    float initialX = 0f;
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
+        float rawX = event.getX();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                initialX = event.getRawX();
-                return true;
-            case MotionEvent.ACTION_UP:
-                //float upX = initialX - event.getX();
-                //initialRawX = -upX;
-                //invalidate();
+                initialRawX = rawX - initialRawX;
                 return true;
             case MotionEvent.ACTION_MOVE:
-                float moveX = initialX - event.getX();
-                initialRawX = -moveX;
+                rawX = event.getRawX();
+                initialRawX = rawX - initialRawX;
                 invalidate();
                 return true;
         }
