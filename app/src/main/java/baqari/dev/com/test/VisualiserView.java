@@ -14,8 +14,13 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
-import static android.R.attr.left;
-import static android.R.attr.right;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 
 public class VisualiserView extends View {
@@ -31,20 +36,20 @@ public class VisualiserView extends View {
     private float rightScroll = 0f;
     private float wavesWidthSum = 0f;
 
+    private CompositeDisposable disposables;
+
     public VisualiserView(Context context) {
         super(context);
         init();
     }
 
     public void init() {
+        disposables = new CompositeDisposable();
         wavePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         wavePaint.setColor(Color.RED);
         wavePaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, getResources().getDisplayMetrics()));
-
-        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3"));
-        visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
-        visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
         waves = new ArrayList<>();
+        amplitudes = new ArrayList();
 
         final Visualizer.OnDataCaptureListener listener = new Visualizer.OnDataCaptureListener() {
             @Override
@@ -65,22 +70,37 @@ public class VisualiserView extends View {
             }
         };
 
-        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mediaPlayer) {
-                amplitudes = new ArrayList();
-                visualizer.setDataCaptureListener(listener, Visualizer.getMaxCaptureRate(), true, true);
-                visualizer.setEnabled(true);
-                mediaPlayer.start();
-            }
-        });
+        Disposable mediaDisposable = Observable.just(MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3")))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Consumer<MediaPlayer>() {
+                    @Override
+                    public void accept(@NonNull MediaPlayer mediaPlayer) throws Exception {
+                        VisualiserView.this.mediaPlayer = mediaPlayer;
 
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mediaPlayer) {
-                visualizer.setEnabled(false);
-            }
-        });
+                        visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
+                        visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
+                        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                            @Override
+                            public void onPrepared(MediaPlayer mediaPlayer) {
+                                amplitudes = new ArrayList();
+                                visualizer.setDataCaptureListener(listener, Visualizer.getMaxCaptureRate(), true, true);
+                                visualizer.setEnabled(true);
+                                mediaPlayer.start();
+                            }
+                        });
+
+                        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                            @Override
+                            public void onCompletion(MediaPlayer mediaPlayer) {
+                                visualizer.setEnabled(false);
+                                if (disposables != null && !disposables.isDisposed())
+                                    disposables.dispose();
+                            }
+                        });
+                    }
+                });
+        disposables.add(mediaDisposable);
     }
 
     @Override
