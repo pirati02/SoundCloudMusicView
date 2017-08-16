@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
@@ -28,15 +27,15 @@ public class VisualiserView extends View {
     private Paint wavePaint;
     private MediaPlayer mediaPlayer;
     private Visualizer visualizer;
-    private List<Double> amplitudes;
-    private List<WaveItem> waves;
+    private List<Double> amplitudes = new ArrayList();
+    private List<WaveItem> waves = new ArrayList<>();
 
     private float initialWaveHeight = 1500f;
     private float initialRawX = 350;
     private float rightScroll = 0f;
     private float wavesWidthSum = 0f;
 
-    private CompositeDisposable disposables;
+    private CompositeDisposable disposables = new CompositeDisposable();
 
     public VisualiserView(Context context) {
         super(context);
@@ -44,12 +43,9 @@ public class VisualiserView extends View {
     }
 
     public void init() {
-        disposables = new CompositeDisposable();
         wavePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         wavePaint.setColor(Color.RED);
         wavePaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, getResources().getDisplayMetrics()));
-        waves = new ArrayList<>();
-        amplitudes = new ArrayList();
 
         final Visualizer.OnDataCaptureListener listener = new Visualizer.OnDataCaptureListener() {
             @Override
@@ -70,25 +66,27 @@ public class VisualiserView extends View {
             }
         };
 
-        Disposable mediaDisposable = Observable.just(MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3")))
-                .observeOn(AndroidSchedulers.mainThread())
+        Disposable mediaDisposable = Observable.just("object")
+                .observeOn(Schedulers.io())
                 .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<MediaPlayer>() {
+                .subscribe(new Consumer<Object>() {
                     @Override
-                    public void accept(@NonNull MediaPlayer mediaPlayer) throws Exception {
+                    public void accept(@NonNull Object o) throws Exception {
+                        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3"));
+                        //mediaPlayer.setDataSource("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3");
                         VisualiserView.this.mediaPlayer = mediaPlayer;
 
                         visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
                         visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
-                        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                            @Override
-                            public void onPrepared(MediaPlayer mediaPlayer) {
-                                amplitudes = new ArrayList();
-                                visualizer.setDataCaptureListener(listener, Visualizer.getMaxCaptureRate(), true, true);
-                                visualizer.setEnabled(true);
-                                mediaPlayer.start();
-                            }
-                        });
+                        //mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                        //  @Override
+                        //public void onPrepared(MediaPlayer mediaPlayer) {
+                        amplitudes = new ArrayList();
+                        visualizer.setDataCaptureListener(listener, Visualizer.getMaxCaptureRate(), true, true);
+                        visualizer.setEnabled(true);
+                        mediaPlayer.start();
+                        //    }
+                        // });
 
                         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                             @Override
@@ -98,6 +96,11 @@ public class VisualiserView extends View {
                                     disposables.dispose();
                             }
                         });
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(@NonNull Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
                     }
                 });
         disposables.add(mediaDisposable);
