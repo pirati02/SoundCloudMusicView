@@ -1,12 +1,15 @@
 package baqari.dev.com.test;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.media.MediaPlayer;
 import android.media.audiofx.Visualizer;
 import android.net.Uri;
+import android.text.TextUtils;
+import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -34,11 +37,28 @@ public class VisualiserView extends View {
     private float initialRawX = 350;
     private float rightScroll = 0f;
     private float wavesWidthSum = 0f;
+    private String mAudioUrl = null;
 
     private CompositeDisposable disposables = new CompositeDisposable();
 
     public VisualiserView(Context context) {
         super(context);
+    }
+
+    public VisualiserView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+
+        TypedArray viewAttrs = context.obtainStyledAttributes(attrs, R.styleable.VisualiserView);
+        try {
+            mAudioUrl = viewAttrs.getString(R.styleable.VisualiserView_audioUrl);
+        } finally {
+            viewAttrs.recycle();
+        }
+        init();
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        mAudioUrl = audioUrl;
         init();
     }
 
@@ -46,7 +66,10 @@ public class VisualiserView extends View {
         wavePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         wavePaint.setColor(Color.RED);
         wavePaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, getResources().getDisplayMetrics()));
+        initPlayer();
+    }
 
+    public void initPlayer() {
         final Visualizer.OnDataCaptureListener listener = new Visualizer.OnDataCaptureListener() {
             @Override
             public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int j) {
@@ -57,7 +80,7 @@ public class VisualiserView extends View {
                 }
                 amplitude = amplitude / waveform.length / 2;
                 amplitudes.add(amplitude * 60);
-                invalidate();
+                postInvalidate();
             }
 
             @Override
@@ -72,27 +95,24 @@ public class VisualiserView extends View {
                 .subscribe(new Consumer<Object>() {
                     @Override
                     public void accept(@NonNull Object o) throws Exception {
-                        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3"));
-                        //mediaPlayer.setDataSource("http://www.alazani.ge/base/AnchiskhatiP/Anchiskhati_-_Vasha_Kampania.mp3");
+                        if (mAudioUrl == null || TextUtils.isEmpty(mAudioUrl))
+                            throw new NotSupportedException("Must provide valid url");
+
+                        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse(mAudioUrl));
                         VisualiserView.this.mediaPlayer = mediaPlayer;
 
                         visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
                         visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
-                        //mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                        //  @Override
-                        //public void onPrepared(MediaPlayer mediaPlayer) {
                         amplitudes = new ArrayList();
                         visualizer.setDataCaptureListener(listener, Visualizer.getMaxCaptureRate(), true, true);
                         visualizer.setEnabled(true);
                         mediaPlayer.start();
-                        //    }
-                        // });
 
                         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                             @Override
                             public void onCompletion(MediaPlayer mediaPlayer) {
                                 visualizer.setEnabled(false);
-                                if (disposables != null && !disposables.isDisposed())
+                                if (!disposables.isDisposed())
                                     disposables.dispose();
                             }
                         });
