@@ -18,15 +18,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         root = (RelativeLayout) findViewById(R.id.root);
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            int hasAudioPermission = checkSelfPermission(Manifest.permission.RECORD_AUDIO);
-
-            if (hasAudioPermission != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 202);
-            } else {
-                visualiserView = new VisualiserView(this);
-                root.addView(visualiserView);
-            }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
+                checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 202);
         } else {
             visualiserView = new VisualiserView(this);
             root.addView(visualiserView);
@@ -41,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 202) {
             visualiserView = new VisualiserView(this);
-            root.addView(visualiserView);
+            visualiserView.setAudioUrl("https://online.freemusicdownloads.world/get-file?vid=W3q8Od5qJio&fn=Rammstein+-+Du+Hast+%28Official+Video%29&pl=False&dt=MP3");
         }
     }
 }

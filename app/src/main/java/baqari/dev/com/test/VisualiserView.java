@@ -34,7 +34,7 @@ public class VisualiserView extends View {
 
     private float initialWaveHeight = 1500f;
     private float initialRawX = 350;
-    private float rightScroll = 0f;
+    private float _xDelta = 0;
     private String mAudioUrl = null;
 
     private CompositeDisposable disposables = new CompositeDisposable();
@@ -125,6 +125,12 @@ public class VisualiserView extends View {
     }
 
     @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        disposables.dispose();
+    }
+
+    @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         initialWaveHeight = MeasureSpec.getSize(heightMeasureSpec);
@@ -147,7 +153,6 @@ public class VisualiserView extends View {
         }
     }
 
-    float _xDelta = 0;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
