@@ -31,12 +31,10 @@ public class VisualiserView extends View {
     private MediaPlayer mediaPlayer;
     private Visualizer visualizer;
     private List<Double> amplitudes = new ArrayList();
-    private List<WaveItem> waves = new ArrayList<>();
 
     private float initialWaveHeight = 1500f;
     private float initialRawX = 350;
     private float rightScroll = 0f;
-    private float wavesWidthSum = 0f;
     private String mAudioUrl = null;
 
     private CompositeDisposable disposables = new CompositeDisposable();
@@ -84,21 +82,21 @@ public class VisualiserView extends View {
             }
 
             @Override
-            public void onFftDataCapture(Visualizer visualizer, byte[] waveform, int i) {
+            public void onFftDataCapture(Visualizer visualizer, byte[] waveform, int j) {
 
             }
         };
 
-        Disposable mediaDisposable = Observable.just("object")
+        Disposable mediaDisposable = Observable.just(mAudioUrl)
                 .observeOn(Schedulers.io())
                 .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Object>() {
+                .subscribe(new Consumer<String>() {
                     @Override
-                    public void accept(@NonNull Object o) throws Exception {
-                        if (mAudioUrl == null || TextUtils.isEmpty(mAudioUrl))
+                    public void accept(@NonNull String url) throws Exception {
+                        if (url == null || TextUtils.isEmpty(url))
                             throw new NotSupportedException("Must provide valid url");
 
-                        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse(mAudioUrl));
+                        mediaPlayer = MediaPlayer.create(getContext(), Uri.parse(url));
                         VisualiserView.this.mediaPlayer = mediaPlayer;
 
                         visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
@@ -134,8 +132,7 @@ public class VisualiserView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        waves.clear();
-        wavesWidthSum = 0f;
+
         float middle = initialRawX;
         for (int i = 0; i < amplitudes.size(); i += 3) {
             double wave = amplitudes.get(i) * 60;
@@ -145,39 +142,24 @@ public class VisualiserView extends View {
             float top = (float) (initialWaveHeight / 2 - (wave / 2));
             float bottom = (float) (initialWaveHeight / 2 + (wave / 2));
 
-            waves.add(new WaveItem(top, bottom, left, right + 15));
-            wavesWidthSum += (right + left);
-
             canvas.drawRect(left + 15, top, right, bottom, wavePaint);
             middle = right;
         }
     }
 
+    float _xDelta = 0;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        float rawX = event.getX();
+
+        float rawX = event.getRawX();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                initialRawX = rawX - initialRawX;
+                _xDelta = rawX - initialRawX;
                 return true;
             case MotionEvent.ACTION_MOVE:
-                rawX = event.getRawX();
-                initialRawX = rawX - initialRawX;
-
-                WaveItem wave = null;
-                for (int i = 0; i < waves.size(); i++) {
-                    WaveItem waveItem = waves.get(i);
-                    int left = (int) ((int) waveItem.getLeft() - rawX);
-                    int right = (int) ((int) waveItem.getRight() - rawX);
-                    if (left > 0 && right < 0 && (i + 1) == waves.size())
-                        wave = waveItem;
-                }
-
-                if (initialRawX < 350 && wave != null) {
-                    rightScroll += rawX;
-                    wave = null;
-                    invalidate();
-                }
+                initialRawX = rawX - _xDelta;
+                invalidate();
                 return true;
         }
         return false;

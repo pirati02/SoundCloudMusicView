@@ -32,7 +32,8 @@ public class MainActivity extends AppCompatActivity {
             root.addView(visualiserView);
         }
         if (visualiserView != null)
-            visualiserView.setAudioUrl("http://www.alazani.ge/base/AnchiskhatiK/Anchiskhati_-_Dideba_Magaliani.mp3");
+            //test link
+            visualiserView.setAudioUrl("https://online.freemusicdownloads.world/get-file?vid=W3q8Od5qJio&fn=Rammstein+-+Du+Hast+%28Official+Video%29&pl=False&dt=MP3");
     }
 
     @Override
